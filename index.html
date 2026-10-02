@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="icon" href="data:," />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <title>Last Cast</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --page: #d9eee5;
+      --ink: #18352f;
+      --muted: #536b63;
+      --panel: #fffaf0;
+      --panel-2: #f4ead5;
+      --line: #9a7655;
+      --line-soft: #d8bea0;
+      --accent: #1d806d;
+      --accent-strong: #125f50;
+      --gold: #f1ad39;
+      --danger: #b94e43;
+      --button: #ffcf59;
+      --shadow: rgba(42, 56, 48, .2);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --page: #111c20;
+        --ink: #f4eee1;
+        --muted: #bdc9c3;
+        --panel: #222c2c;
+        --panel-2: #313a36;
+        --line: #aa8060;
+        --line-soft: #5c564a;
+        --accent: #63cdb0;
+        --accent-strong: #8cdfc7;
+        --gold: #ffc85d;
+        --danger: #ff887c;
+        --button: #e6ad36;
+        --shadow: rgba(0, 0, 0, .35);
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--page);
+      font-family: "Atkinson Hyperlegible", sans-serif;
+    }
+    button { font: inherit; }
+    .page {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: clamp(10px, 2.4vw, 28px) clamp(8px, 2.2vw, 24px) max(18px, env(safe-area-inset-bottom));
+    }
+    .game-shell {
+      position: relative;
+      overflow: hidden;
+      border: 3px solid #65452f;
+      border-radius: 18px;
+      background: #75c9cf;
+      box-shadow: 0 18px 50px var(--shadow);
+    }
+    .topbar {
+      min-height: 52px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px 8px 14px;
+      border-bottom: 2px solid var(--line);
+      background: var(--panel);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 13px;
+    }
+    .voyage { font-weight: 600; }
+    .hint { color: var(--muted); text-align: center; }
+    .reset {
+      justify-self: end;
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 11px;
+      background: var(--panel-2);
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .reset:hover { border-color: var(--accent); color: var(--accent-strong); }
+    .reset:focus-visible, .primary:focus-visible, .sound-toggle:focus-visible, canvas:focus-visible {
+      outline: 3px solid var(--gold);
+      outline-offset: 2px;
+    }
+    .canvas-wrap { position: relative; }
+    canvas {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 10;
+      display: block;
+      touch-action: none;
+      cursor: grab;
+    }
+    canvas:active { cursor: grabbing; }
+    .screen-action {
+      position: absolute;
+      left: 50%;
+      bottom: clamp(22px, 5vw, 52px);
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 2;
+    }
+    .primary {
+      min-width: 170px;
+      min-height: 48px;
+      padding: 11px 22px;
+      border: 3px solid #684326;
+      border-radius: 11px;
+      background: var(--button);
+      color: #33240e;
+      box-shadow: 0 5px 0 #8e5e24;
+      cursor: pointer;
+      font-family: "IBM Plex Mono", monospace;
+      font-weight: 600;
+    }
+    .primary:active { transform: translateY(3px); box-shadow: 0 2px 0 #8e5e24; }
+    .sound-toggle {
+      width: 48px;
+      height: 48px;
+      border: 2px solid #684326;
+      border-radius: 50%;
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 20px;
+    }
+    .below {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .panel {
+      border: 1px solid var(--line-soft);
+      border-radius: 11px;
+      background: var(--panel);
+      padding: 13px 15px;
+    }
+    .panel h2 {
+      margin: 0 0 6px;
+      font: 600 12px/1.2 "IBM Plex Mono", monospace;
+      color: var(--accent-strong);
+      letter-spacing: .02em;
+    }
+    .panel p { margin: 0; color: var(--muted); line-height: 1.42; }
+    .steps { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .step { display: inline-flex; gap: 5px; align-items: center; }
+    .step b {
+      display: inline-grid;
+      place-items: center;
+      width: 23px;
+      height: 23px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font: 600 11px "IBM Plex Mono", monospace;
+    }
+    .arrow { color: var(--line); font-weight: 700; }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+    .legend span::before { content: ""; width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; background: var(--dot); }
+    @media (max-width: 720px) {
+      .page { padding-left: 0; padding-right: 0; padding-top: 0; }
+      .game-shell { border-left: 0; border-right: 0; border-top: 0; border-radius: 0 0 14px 14px; }
+      .topbar { grid-template-columns: 1fr auto; }
+      .hint { grid-column: 1 / -1; grid-row: 2; text-align: left; padding-bottom: 2px; }
+      .below { grid-template-columns: 1fr; margin: 10px 10px 0; }
+      .legend { display: none; }
+    }
+    @media (max-width: 430px) {
+      .topbar { font-size: 12px; min-height: 48px; }
+      .reset { padding: 6px 8px; }
+      .primary { min-width: 150px; min-height: 44px; padding: 9px 16px; }
+      .screen-action { bottom: 17px; }
+      .panel { padding: 11px 12px; }
+      .steps { font-size: 14px; gap: 5px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="game-shell" aria-label="Last Cast, a playable first-person fishing game">
+      <div class="topbar" aria-live="polite">
+        <div class="voyage" id="voyageLabel">Three days. Three bills.</div>
+        <div class="hint" id="hintLabel">Drag to look · tap to fish</div>
+        <button class="reset" id="resetButton" type="button">New voyage ↻</button>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="game" width="1000" height="625" tabindex="0" aria-label="First-person fishing game. Drag to look around. Tap or click to cast, hook a bite, and reel."></canvas>
+        <div class="screen-action" id="screenAction">
+          <button class="primary" id="actionButton" type="button">BEGIN VOYAGE</button>
+          <button class="sound-toggle" id="soundButton" type="button" aria-label="Turn sound off" title="Sound on">♪</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="below" aria-label="How to play">
+      <div class="panel">
+        <h2>THE DAY LOOP</h2>
+        <div class="steps">
+          <span class="step"><b>1</b> Cast</span><span class="arrow">→</span>
+          <span class="step"><b>2</b> Hook the bite</span><span class="arrow">→</span>
+          <span class="step"><b>3</b> Reel in rhythm</span><span class="arrow">→</span>
+          <span class="step"><b>4</b> Pay at dusk</span>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>THE RULE</h2>
+        <p>The Kappa takes its bill first. What remains becomes your score. Miss a bill, and it takes you.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+      var canvas = document.getElementById('game');
+      var ctx = canvas.getContext('2d');
+      var actionButton = document.getElementById('actionButton');
+      var screenAction = document.getElementById('screenAction');
+      var soundButton = document.getElementById('soundButton');
+      var resetButton = document.getElementById('resetButton');
+      var voyageLabel = document.getElementById('voyageLabel');
+      var hintLabel = document.getElementById('hintLabel');
+      var W = 1000, H = 625;
+      var DAY_LENGTH = 65;
+      var state = 'title';
+      var day = 1;
+      var dayTime = 0;
+      var banked = 0;
+      var hold = [];
+      var fishing = 'ready';
+      var waitTimer = 0;
+      var biteTimer = 0;
+      var reelProgress = 0;
+      var reelMisses = 0;
+      var reelClock = 0;
+      var catchChoice = null;
+      var message = '';
+      var messageTimer = 0;
+      var sceneTimer = 0;
+      var duskResult = null;
+      var pointer = { down: false, x: 0, y: 0, moved: 0 };
+      var view = 0;
+      var targetView = 0;
+      var bubbles = [];
+      var confetti = [];
+      var lastTime = 0;
+      var audioCtx = null;
+      var soundOn = true;
+      var bills = [18, 27, 38];
+      var catches = [
+        { name: 'Pebble Perch', value: 6, color: '#f2a744', accent: '#74452c', speed: .95, weight: 42 },
+        { name: 'Ribbon Trout', value: 10, color: '#ee7468', accent: '#7e3343', speed: 1.28, weight: 30 },
+        { name: 'Moon Koi', value: 16, color: '#83d7d1', accent: '#256b71', speed: 1.62, weight: 18 },
+        { name: 'Lost Locket', value: 22, color: '#ffd460', accent: '#8d6422', speed: 1.9, weight: 10, treasure: true }
+      ];
+
+      function holdValue() {
+        return hold.reduce(function (sum, item) { return sum + item.value; }, 0);
+      }
+      function setOverlay(label, show) {
+        actionButton.textContent = label;
+        screenAction.style.display = show ? 'flex' : 'none';
+      }
+      function setMessage(text, seconds) {
+        message = text;
+        messageTimer = seconds || 1.5;
+      }
+      function tone(freq, duration, type, volume, delay) {
+        if (!soundOn) return;
+        try {
+          if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          var start = audioCtx.currentTime + (delay || 0);
+          var osc = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
+          osc.type = type || 'sine';
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(volume || .035, start);
+          gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.start(start); osc.stop(start + duration);
+        } catch (e) { /* sound is optional */ }
+      }
+      function splash(x, y, color, count) {
+        for (var i = 0; i < count; i++) {
+          var angle = Math.PI * (1.08 + Math.random() * .84);
+          var speed = 45 + Math.random() * 95;
+          bubbles.push({ x: x, y: y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: .8, max: .8, color: color || '#e9ffff', size: 2 + Math.random() * 5 });
+        }
+      }
+      function resetVoyage() {
+        day = 1; banked = 0; hold = []; dayTime = 0; fishing = 'ready'; state = 'title';
+        view = 0; targetView = 0; bubbles = []; confetti = []; duskResult = null;
+        voyageLabel.textContent = 'Three days. Three bills.';
+        hintLabel.textContent = 'Drag to look · tap to fish';
+        setOverlay('BEGIN VOYAGE', true);
+      }
+      function startDay() {
+        state = 'dayIntro';
+        sceneTimer = 2.7;
+        dayTime = 0;
+        hold = [];
+        fishing = 'ready';
+        catchChoice = null;
+        reelProgress = 0;
+        bubbles = [];
+        voyageLabel.textContent = 'Day ' + day + ' of 3 · Bill ' + bills[day - 1] + ' shells';
+        hintLabel.textContent = 'Tap water to cast · tap again on a bite';
+        setOverlay('', false);
+        tone(392, .18, 'sine', .025);
+        tone(523, .25, 'sine', .025, .14);
+      }
+      function beginFishing() {
+        state = 'fishing';
+        fishing = 'ready';
+        setMessage('Morning water. Make it count.', 2);
+      }
+      function chooseCatch() {
+        var roll = Math.random() * 100;
+        var total = 0;
+        for (var i = 0; i < catches.length; i++) {
+          total += catches[i].weight;
+          if (roll <= total) return catches[i];
+        }
+        return catches[0];
+      }
+      function castLine() {
+        if (state !== 'fishing' || fishing !== 'ready') return;
+        fishing = 'casting';
+        waitTimer = .65;
+        tone(240, .08, 'triangle', .018);
+        tone(360, .1, 'triangle', .014, .07);
+      }
+      function interactFish() {
+        if (state !== 'fishing') return;
+        if (fishing === 'ready') { castLine(); return; }
+        if (fishing === 'bite') {
+          fishing = 'reeling';
+          reelProgress = 0;
+          reelMisses = 0;
+          reelClock = 0;
+          tone(720, .1, 'square', .026);
+          setMessage('Hooked! Tap when the fish crosses the green water.', 1.7);
+          return;
+        }
+        if (fishing === 'reeling') {
+          var pos = reelMarker();
+          if (pos > .35 && pos < .65) {
+            reelProgress++;
+            splash(500, 389, '#e9ffff', 9);
+            tone(510 + reelProgress * 70, .09, 'sine', .032);
+            if (reelProgress >= 4) landCatch();
+          } else {
+            reelMisses++;
+            reelProgress = Math.max(0, reelProgress - 1);
+            tone(115, .09, 'sawtooth', .018);
+            setMessage('Easy… wait for the green.', .8);
+            if (reelMisses >= 6) loseCatch();
+          }
+        }
+      }
+      function reelMarker() {
+        var speed = catchChoice ? catchChoice.speed : 1;
+        return .5 + Math.sin(reelClock * speed * 4.1) * .47;
+      }
+      function landCatch() {
+        fishing = 'landed';
+        waitTimer = 1.7;
+        hold.push(catchChoice);
+        var label = catchChoice.treasure ? 'Treasure! ' : 'Caught! ';
+        setMessage(label + catchChoice.name + ' · +' + catchChoice.value, 1.7);
+        splash(500, 382, catchChoice.color, 24);
+        tone(660, .12, 'sine', .04);
+        tone(880, .22, 'triangle', .035, .12);
+      }
+      function loseCatch() {
+        fishing = 'lost';
+        waitTimer = 1.25;
+        setMessage('It slipped the hook.', 1.2);
+        splash(500, 382, '#e9ffff', 13);
+        tone(100, .24, 'sawtooth', .02);
+      }
+      function beginDusk() {
+        state = 'kappa';
+        fishing = 'closed';
+        sceneTimer = 6.2;
+        var value = holdValue();
+        var bill = bills[day - 1];
+        var paid = value >= bill;
+        duskResult = { value: value, bill: bill, paid: paid, left: Math.max(0, value - bill), mood: paid && value >= bill * 1.8 ? 'pleased' : (paid ? 'solemn' : 'angry') };
+        if (paid) banked += duskResult.left;
+        hintLabel.textContent = 'The Kappa always takes its cut first.';
+        tone(147, .55, 'sine', .04);
+        tone(196, .8, 'triangle', .025, .35);
+        splash(680, 400, '#c8fbf1', 35);
+      }
+      function resolveDusk() {
+        if (!duskResult.paid) {
+          state = 'lose';
+          voyageLabel.textContent = 'Voyage over · Banked ' + banked;
+          hintLabel.textContent = 'The hold could not cover the bill.';
+          setOverlay('TRY AGAIN', true);
+          tone(110, .8, 'sawtooth', .025);
+        } else if (day >= 3) {
+          state = 'win';
+          voyageLabel.textContent = 'Voyage complete · Banked ' + banked;
+          hintLabel.textContent = 'Three bills paid. You made it home.';
+          setOverlay('SAIL AGAIN', true);
+          for (var i = 0; i < 70; i++) confetti.push({ x: Math.random() * W, y: -Math.random() * H, vx: -20 + Math.random() * 40, vy: 45 + Math.random() * 100, life: 6, color: ['#ffd15b','#ef7f68','#71d0bb','#fff4cf'][i % 4] });
+          tone(523, .2, 'triangle', .035);
+          tone(659, .2, 'triangle', .035, .16);
+          tone(784, .45, 'triangle', .035, .32);
+        } else {
+          day++;
+          startDay();
+        }
+      }
+      function update(dt) {
+        targetView = Math.max(-1, Math.min(1, targetView));
+        view += (targetView - view) * Math.min(1, dt * 6);
+        if (messageTimer > 0) messageTimer -= dt;
+        bubbles.forEach(function (p) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 150 * dt; p.life -= dt; });
+        bubbles = bubbles.filter(function (p) { return p.life > 0; });
+        confetti.forEach(function (p) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; if (p.y > H + 20) p.y = -10; });
+        if (state === 'dayIntro') {
+          sceneTimer -= dt;
+          if (sceneTimer <= 0) beginFishing();
+        } else if (state === 'fishing') {
+          dayTime += dt;
+          if (dayTime >= DAY_LENGTH) { dayTime = DAY_LENGTH; beginDusk(); return; }
+          if (fishing === 'casting') {
+            waitTimer -= dt;
+            if (waitTimer <= 0) {
+              fishing = 'waiting';
+              waitTimer = 1.8 + Math.random() * 2.5;
+            }
+          } else if (fishing === 'waiting') {
+            waitTimer -= dt;
+            if (waitTimer <= 0) {
+              fishing = 'bite';
+              biteTimer = 1.35;
+              catchChoice = chooseCatch();
+              splash(500, 376, '#e9ffff', 18);
+              tone(210, .08, 'square', .03);
+              tone(310, .08, 'square', .025, .1);
+              setMessage('BITE! Tap now!', 1.2);
+            }
+          } else if (fishing === 'bite') {
+            biteTimer -= dt;
+            if (biteTimer <= 0) loseCatch();
+          } else if (fishing === 'reeling') {
+            reelClock += dt;
+          } else if (fishing === 'landed' || fishing === 'lost') {
+            waitTimer -= dt;
+            if (waitTimer <= 0) { fishing = 'ready'; catchChoice = null; }
+          }
+        } else if (state === 'kappa') {
+          sceneTimer -= dt;
+          if (sceneTimer <= 0) resolveDusk();
+        }
+      }
+
+      function mix(a, b, t) { return Math.round(a + (b - a) * t); }
+      function rgb(a, b, t) { return 'rgb(' + mix(a[0],b[0],t) + ',' + mix(a[1],b[1],t) + ',' + mix(a[2],b[2],t) + ')'; }
+      function roundRect(x, y, w, h, r) {
+        r = Math.min(r, w/2, h/2); ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+      }
+      function fillRound(x,y,w,h,r,color) { ctx.fillStyle=color; roundRect(x,y,w,h,r); ctx.fill(); }
+      function drawCloud(x,y,s,color) {
+        ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,25*s,Math.PI,0); ctx.arc(x+27*s,y-10*s,32*s,Math.PI,0); ctx.arc(x+61*s,y,25*s,Math.PI,0); ctx.lineTo(x+85*s,y+15*s); ctx.lineTo(x-24*s,y+15*s); ctx.closePath(); ctx.fill();
+      }
+      function drawWater(time, dusk) {
+        var p = state === 'fishing' ? dayTime / DAY_LENGTH : (state === 'dayIntro' ? 0 : dusk ? 1 : .22);
+        var warm = Math.max(0, (p - .55) / .45);
+        var skyTop = rgb([104,189,211],[94,62,128],warm);
+        var skyBottom = rgb([239,223,155],[244,119,72],warm);
+        var water = rgb([49,160,178],[45,54,105],warm);
+        ctx.fillStyle=skyTop; ctx.fillRect(0,0,W,250);
+        ctx.fillStyle=skyBottom; ctx.fillRect(0,180,W,180);
+        var sunX=110+p*780, sunY=150-Math.sin(p*Math.PI)*105;
+        ctx.fillStyle=warm>.78?'#ffb246':'#fff0a2'; ctx.beginPath(); ctx.arc(sunX,sunY,34,0,Math.PI*2); ctx.fill();
+        drawCloud(120-view*50,84,.9,'rgba(255,248,223,.72)'); drawCloud(720-view*80,112,1.1,'rgba(255,232,207,.55)');
+        ctx.fillStyle=rgb([74,126,112],[55,48,83],warm); ctx.beginPath(); ctx.moveTo(0,255); ctx.quadraticCurveTo(145-view*55,145,305,255); ctx.quadraticCurveTo(475-view*60,165,650,255); ctx.quadraticCurveTo(820-view*80,160,1000,255); ctx.lineTo(1000,330); ctx.lineTo(0,330); ctx.fill();
+        ctx.fillStyle=rgb([91,154,122],[73,53,88],warm); ctx.beginPath(); ctx.moveTo(0,270); ctx.quadraticCurveTo(170-view*110,210,350,270); ctx.quadraticCurveTo(610-view*95,195,1000,270); ctx.lineTo(1000,330); ctx.lineTo(0,330); ctx.fill();
+        ctx.fillStyle=water; ctx.fillRect(0,255,W,370);
+        ctx.strokeStyle=rgb([155,226,218],[221,135,137],warm); ctx.lineWidth=4;
+        for(var i=0;i<9;i++){ var yy=282+i*34; var shift=(time*.025*(i%2?1:-1)+view*45)%90; ctx.beginPath(); for(var x=-100;x<W+100;x+=90){ctx.moveTo(x+shift,yy);ctx.quadraticCurveTo(x+30+shift,yy-7,x+62+shift,yy);}ctx.stroke(); }
+        ctx.globalAlpha=.7; ctx.fillStyle='#fff3cf';
+        for(var s=0;s<10;s++){var sx=sunX+(s-5)*15;ctx.fillRect(sx,270+s*23,7+Math.abs(5-s)*4,3);}ctx.globalAlpha=1;
+      }
+      function drawBoat() {
+        ctx.fillStyle='#5d3528'; ctx.beginPath(); ctx.moveTo(0,520); ctx.quadraticCurveTo(210,576,500,570); ctx.quadraticCurveTo(790,576,1000,520); ctx.lineTo(1000,625); ctx.lineTo(0,625); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle='#9c6540';ctx.lineWidth=23;ctx.beginPath();ctx.moveTo(-15,508);ctx.quadraticCurveTo(500,603,1015,508);ctx.stroke();
+        ctx.strokeStyle='#d49151';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(-15,499);ctx.quadraticCurveTo(500,586,1015,499);ctx.stroke();
+        ctx.fillStyle='#74432f';ctx.fillRect(66,567,868,58);ctx.fillStyle='#a86a43';ctx.fillRect(66,567,868,8);
+        for(var x=120;x<930;x+=105){ctx.strokeStyle='rgba(45,24,20,.35)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x,575);ctx.lineTo(x-8,625);ctx.stroke();}
+      }
+      function drawRod() {
+        var active = fishing !== 'ready' && fishing !== 'landed' && fishing !== 'lost' && fishing !== 'closed';
+        ctx.save(); ctx.translate(view*25,0);
+        ctx.strokeStyle='#633925';ctx.lineWidth=14;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(620,620);ctx.quadraticCurveTo(575,470,510,300);ctx.stroke();
+        ctx.strokeStyle='#c17a3e';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(620,620);ctx.quadraticCurveTo(575,470,510,300);ctx.stroke();
+        if(active){ctx.strokeStyle='#f8e4bd';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(510,300);ctx.lineTo(500,376);ctx.stroke();}
+        ctx.restore();
+      }
+      function glove(x,y,flip,grab) {
+        ctx.save();ctx.translate(x,y);ctx.scale(flip? -1:1,1);ctx.rotate(flip?.12:-.12);
+        ctx.fillStyle='#f3c84b';ctx.strokeStyle='#8c5b24';ctx.lineWidth=4;
+        roundRect(-38,-30,76,70,22);ctx.fill();ctx.stroke();
+        for(var i=0;i<4;i++){roundRect(-32+i*17,-49+(grab?i*3:0),15,35,8);ctx.fill();ctx.stroke();}
+        ctx.fillStyle='#d49b31';ctx.fillRect(-35,30,70,19);ctx.strokeRect(-35,30,70,19);ctx.restore();
+      }
+      function drawBobber(time) {
+        if(fishing==='ready'||fishing==='closed'||fishing==='landed'||fishing==='lost') return;
+        var y=376 + Math.sin(time*.006)*3;
+        if(fishing==='bite') y+=Math.sin(time*.04)*12;
+        ctx.fillStyle='#fff4df';ctx.beginPath();ctx.arc(500,y,13,0,Math.PI*2);ctx.fill();ctx.fillStyle='#d74f43';ctx.beginPath();ctx.arc(500,y,13,Math.PI,0);ctx.fill();ctx.strokeStyle='#653c2d';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#d74f43';ctx.fillRect(497,y-23,6,12);
+        ctx.strokeStyle='rgba(225,255,250,.75)';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(500,y+13,28+Math.sin(time*.01)*7,8,0,0,Math.PI*2);ctx.stroke();
+      }
+      function drawHUD() {
+        if(state==='title'||state==='win'||state==='lose') return;
+        var remaining=Math.max(0,DAY_LENGTH-dayTime); var mins=Math.floor(remaining/60), secs=Math.floor(remaining%60);
+        fillRound(18,18,212,70,13,'rgba(34,47,43,.82)');
+        ctx.fillStyle='#fff8e8';ctx.font='600 14px "IBM Plex Mono"';ctx.fillText('DAY '+day+' · '+mins+':'+String(secs).padStart(2,'0'),34,43);
+        ctx.fillStyle='#f4c555';ctx.fillText('BILL  '+bills[day-1],34,69);
+        fillRound(W-224,18,206,70,13,'rgba(34,47,43,.82)');
+        ctx.fillStyle='#fff8e8';ctx.fillText('HOLD  '+holdValue(),W-208,43);ctx.fillStyle='#8fe0c8';ctx.fillText('BANK  '+banked,W-208,69);
+        if(hold.length){
+          fillRound(18,99,245,36,10,'rgba(255,250,232,.86)');ctx.fillStyle='#26423a';ctx.font='700 13px "Atkinson Hyperlegible"';
+          var names={};hold.forEach(function(f){names[f.name]=(names[f.name]||0)+1;});
+          var txt=Object.keys(names).map(function(n){return names[n]+'× '+n.replace('Pebble ','').replace('Ribbon ','').replace('Moon ','').replace('Lost ','');}).join(' · ');
+          if(txt.length>31)txt=hold.length+' catches aboard';ctx.fillText(txt,31,122);
+        }
+      }
+      function drawReel() {
+        if(fishing!=='reeling') return;
+        fillRound(250,145,500,98,15,'rgba(31,47,42,.9)');
+        ctx.fillStyle='#fff8e8';ctx.font='700 17px "Atkinson Hyperlegible"';ctx.textAlign='center';ctx.fillText(catchChoice.name+' is fighting!',500,174);
+        var bx=292, by=196, bw=416;
+        fillRound(bx,by,bw,18,9,'#5b6e67');fillRound(bx+bw*.35,by,bw*.30,18,9,'#69cf96');
+        var marker=bx+bw*reelMarker();ctx.fillStyle=catchChoice.color;ctx.beginPath();ctx.arc(marker,by+9,15,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#fff8e8';ctx.lineWidth=3;ctx.stroke();
+        ctx.fillStyle='#fff8e8';ctx.font='600 13px "IBM Plex Mono"';ctx.fillText('GOOD TAPS  '+reelProgress+' / 4',500,231);ctx.textAlign='left';
+      }
+      function drawFishIcon(f,x,y,scale) {
+        ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.fillStyle=f.color;ctx.strokeStyle=f.accent;ctx.lineWidth=3;
+        if(f.treasure){ctx.beginPath();ctx.arc(0,0,18,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(0,0,7,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#ffd460';ctx.beginPath();ctx.moveTo(0,-26);ctx.lineTo(5,-17);ctx.lineTo(15,-15);ctx.lineTo(7,-7);ctx.lineTo(9,3);ctx.lineTo(0,-2);ctx.lineTo(-9,3);ctx.lineTo(-7,-7);ctx.lineTo(-15,-15);ctx.lineTo(-5,-17);ctx.closePath();ctx.fill();}
+        else{ctx.beginPath();ctx.ellipse(0,0,32,19,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(-26,0);ctx.lineTo(-49,-21);ctx.lineTo(-47,20);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(13,-5,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#26352f';ctx.beginPath();ctx.arc(15,-5,2,0,Math.PI*2);ctx.fill();}
+        ctx.restore();
+      }
+      function drawKappa(time) {
+        var rise=Math.min(1,(6.2-sceneTimer)/1.3);var ky=420-(rise*140)+Math.sin(time*.005)*5;
+        ctx.strokeStyle='rgba(190,245,229,.7)';ctx.lineWidth=6;ctx.beginPath();ctx.ellipse(680,420,105*rise,25*rise,0,0,Math.PI*2);ctx.stroke();
+        ctx.save();ctx.translate(680,ky);
+        ctx.fillStyle='#79b84d';ctx.strokeStyle='#345f35';ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,0,71,0,Math.PI*2);ctx.fill();ctx.stroke();
+        ctx.fillStyle='#5c953b';ctx.beginPath();ctx.ellipse(-67,20,25,14,-.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(67,20,25,14,.5,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#d2bd85';ctx.beginPath();ctx.ellipse(0,-62,54,15,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#77c9d0';ctx.beginPath();ctx.ellipse(0,-65,43,10,0,0,Math.PI*2);ctx.fill();
+        var mood=duskResult?duskResult.mood:'solemn';ctx.strokeStyle='#29452d';ctx.lineWidth=6;ctx.lineCap='round';
+        ctx.beginPath();if(mood==='pleased'){ctx.arc(-25,-6,9,0,Math.PI);ctx.moveTo(16,-6);ctx.arc(25,-6,9,0,Math.PI);ctx.moveTo(-10,28);ctx.quadraticCurveTo(0,39,12,28);}else if(mood==='angry'){ctx.moveTo(-36,-16);ctx.lineTo(-17,-7);ctx.moveTo(36,-16);ctx.lineTo(17,-7);ctx.moveTo(-14,33);ctx.quadraticCurveTo(0,18,14,33);}else{ctx.moveTo(-34,-7);ctx.lineTo(-18,-7);ctx.moveTo(18,-7);ctx.lineTo(34,-7);ctx.moveTo(-12,29);ctx.lineTo(12,29);}ctx.stroke();
+        ctx.fillStyle='#5f8d3c';ctx.beginPath();ctx.arc(-42,18,9,0,Math.PI*2);ctx.arc(42,18,9,0,Math.PI*2);ctx.fill();ctx.restore();
+      }
+      function drawTitle() {
+        ctx.fillStyle='rgba(23,47,44,.27)';ctx.fillRect(0,0,W,H);
+        ctx.textAlign='center';ctx.fillStyle='#fff8df';ctx.strokeStyle='#61402d';ctx.lineWidth=8;ctx.font='700 86px "Atkinson Hyperlegible"';ctx.strokeText('LAST CAST',500,180);ctx.fillText('LAST CAST',500,180);
+        ctx.font='700 22px "Atkinson Hyperlegible"';ctx.fillStyle='#fff4d4';ctx.fillText('A three-day fishing voyage',500,218);
+        fillRound(285,257,430,126,16,'rgba(255,249,224,.91)');ctx.fillStyle='#24443d';ctx.font='700 18px "Atkinson Hyperlegible"';ctx.fillText('Fish by day. Settle the bill at dusk.',500,294);ctx.font='400 16px "Atkinson Hyperlegible"';ctx.fillText('Tap to cast, tap the bite, then reel in rhythm.',500,326);ctx.fillText('Pay all three Kappa bills to make it home.',500,352);ctx.textAlign='left';
+      }
+      function drawDayIntro() {
+        ctx.fillStyle='rgba(24,50,45,.35)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';ctx.fillStyle='#fff7df';ctx.strokeStyle='#553829';ctx.lineWidth=6;ctx.font='700 58px "Atkinson Hyperlegible"';ctx.strokeText('DAY '+day,500,242);ctx.fillText('DAY '+day,500,242);ctx.font='700 20px "IBM Plex Mono"';ctx.fillText('DUSK BILL · '+bills[day-1]+' SHELLS',500,280);ctx.font='400 18px "Atkinson Hyperlegible"';ctx.fillText('Catch enough to pay. Anything extra becomes score.',500,316);ctx.textAlign='left';
+      }
+      function drawDusk() {
+        drawKappa(performance.now());
+        if(sceneTimer<4.6){
+          var r=duskResult;fillRound(120,82,470,204,17,'rgba(255,245,218,.94)');ctx.fillStyle='#263f39';ctx.font='700 20px "Atkinson Hyperlegible"';ctx.fillText('THE RECKONING',148,118);ctx.font='600 16px "IBM Plex Mono"';ctx.fillText('HOLD',148,154);ctx.fillText(String(r.value),510,154);ctx.fillText('KAPPA\'S CUT',148,189);ctx.fillStyle='#b34c3f';ctx.fillText('− '+r.bill,492,189);ctx.strokeStyle='#b7946f';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(148,204);ctx.lineTo(548,204);ctx.stroke();ctx.fillStyle='#263f39';ctx.fillText('BANKED TODAY',148,235);ctx.fillStyle=r.paid?'#1a7b64':'#b34c3f';ctx.fillText(r.paid?'+ '+r.left:'UNPAID',467,235);ctx.font='700 17px "Atkinson Hyperlegible"';ctx.fillStyle='#263f39';ctx.fillText(r.paid?(r.mood==='pleased'?'The Kappa looks almost pleased.':'The Kappa accepts its due.'):'The Kappa reaches for you.',148,267);
+        }
+      }
+      function drawEnd(win) {
+        ctx.fillStyle=win?'rgba(23,84,72,.7)':'rgba(55,31,50,.72)';ctx.fillRect(0,0,W,H);ctx.textAlign='center';ctx.fillStyle='#fff8e4';ctx.font='700 62px "Atkinson Hyperlegible"';ctx.fillText(win?'VOYAGE COMPLETE':'TAKEN AT DUSK',500,195);ctx.font='400 21px "Atkinson Hyperlegible"';ctx.fillText(win?'Three days. Three bills. Safe harbor.':'The Kappa keeps the water — and tonight, the fisher.',500,236);ctx.font='600 18px "IBM Plex Mono"';ctx.fillStyle='#ffd05d';ctx.fillText('TOTAL BANKED  '+banked,500,285);
+        if(!win){glove(445,390,false,true);glove(555,390,true,true);}ctx.textAlign='left';
+      }
+      function drawMessage() {
+        if(messageTimer<=0||!message)return;ctx.font='700 19px "Atkinson Hyperlegible"';var w=Math.min(520,ctx.measureText(message).width+42);fillRound(500-w/2,455,w,44,12,'rgba(255,249,226,.94)');ctx.fillStyle='#263f39';ctx.textAlign='center';ctx.fillText(message,500,483);ctx.textAlign='left';
+      }
+      function draw(time) {
+        drawWater(time,state==='kappa'||state==='lose');drawBoat();drawRod();drawBobber(time);
+        bubbles.forEach(function(p){ctx.globalAlpha=Math.max(0,p.life/p.max);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;
+        glove(395,590,false,fishing==='reeling');glove(650,590,true,fishing==='reeling');
+        drawHUD();drawReel();drawMessage();
+        if(state==='title')drawTitle();else if(state==='dayIntro')drawDayIntro();else if(state==='kappa')drawDusk();else if(state==='win')drawEnd(true);else if(state==='lose'){drawKappa(time);drawEnd(false);}
+        confetti.forEach(function(p){ctx.fillStyle=p.color;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.y*.02);ctx.fillRect(-4,-7,8,14);ctx.restore();});
+      }
+      function frame(time) {
+        var dt=Math.min(.04,(time-lastTime)/1000||.016);lastTime=time;update(dt);draw(time);requestAnimationFrame(frame);
+      }
+      function activate() {
+        if(state==='title'||state==='win'||state==='lose') startDay();
+      }
+      actionButton.addEventListener('click',activate);
+      resetButton.addEventListener('click',resetVoyage);
+      soundButton.addEventListener('click',function(){soundOn=!soundOn;soundButton.textContent=soundOn?'♪':'×';soundButton.setAttribute('aria-label',soundOn?'Turn sound off':'Turn sound on');soundButton.title=soundOn?'Sound on':'Sound off';if(soundOn)tone(440,.08,'sine',.02);});
+      canvas.addEventListener('pointerdown',function(e){pointer.down=true;pointer.x=e.clientX;pointer.y=e.clientY;pointer.moved=0;canvas.setPointerCapture(e.pointerId);tone(1,.01,'sine',.0001);});
+      canvas.addEventListener('pointermove',function(e){if(!pointer.down)return;var dx=e.clientX-pointer.x;pointer.moved+=Math.abs(dx)+Math.abs(e.clientY-pointer.y);targetView+=dx/(canvas.clientWidth*.6);pointer.x=e.clientX;pointer.y=e.clientY;});
+      canvas.addEventListener('pointerup',function(e){if(!pointer.down)return;pointer.down=false;if(pointer.moved<12)interactFish();try{canvas.releasePointerCapture(e.pointerId);}catch(err){}});
+      canvas.addEventListener('pointercancel',function(){pointer.down=false;});
+      window.addEventListener('keydown',function(e){if((e.key===' '||e.key==='Enter')&&state==='fishing'){e.preventDefault();interactFish();}if(e.key.toLowerCase()==='r')resetVoyage();});
+      resetVoyage();requestAnimationFrame(frame);
+    }());
+  </script>
+</body>
+</html>
